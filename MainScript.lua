@@ -2,7 +2,7 @@
 local stuff = {
     AllowedUsers = {
         'Sammywammylol502',
-        -- game.Players.LocalPlayer.Name comment this out if u wants tripminesz
+        game.Players.LocalPlayer.Name
     }
 }
 
