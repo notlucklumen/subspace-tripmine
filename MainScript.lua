@@ -234,297 +234,289 @@ do
     end
 end
 
-local StarterGui = game:GetService('StarterGui')
+local mines = {}
+local currentTool = nil
 
-local function notify(title, text)
-    pcall(function()
-        StarterGui:SetCore('SendNotification', {
-            Title = title,
-            Text = text,
-            Duration = 5
-        })
-    end)
-end
+local function giveTool()
+    if currentTool then
+        pcall(function() currentTool:Destroy() end)
+        currentTool = nil
+    end
 
-Net.on('join', function(from, p)
-    if type(p) ~= 'table' or p.job ~= game.JobId then return end
-    notify('Subspace', from .. ' ran the script')
-    Net.send('here', { job = game.JobId })
-end)
+    local subspaceTool = Create.tool({
+        Name = 'SubspaceTripmine',
+        TextureId = 'rbxassetid://11987521',
+        Grip = CFrame.new(-0.5, 0, 0) * CFrame.Angles(0, math.rad(-90), 0),
+        Parent = lplr:WaitForChild('Backpack')
+    })
 
-Net.on('here', function(from, p)
-    if type(p) ~= 'table' or p.job ~= game.JobId then return end
-    notify('Subspace', from .. ' is also using the script')
-end)
+    currentTool = subspaceTool
 
-task.delay(1, function()
-    Net.send('join', { job = game.JobId })
-end)
+    local handle = Create.part({
+        Name = 'Handle',
+        Color = Color3.fromRGB(255, 0, 191),
+        Size = Vector3.new(2, 2, 2),
+        Parent = subspaceTool
+    })
 
-local subspaceTool = Create.tool({
-    Name = 'SubspaceTripmine',
-    TextureId = 'rbxassetid://11987521',
-    Grip = CFrame.new(-0.5, 0, 0) * CFrame.Angles(0, math.rad(-90), 0),
-    Parent = backpack
-})
+    local mesh = Create.mesh({
+        Name = 'Mesh',
+        TextureId = 'rbxassetid://11954766',
+        MeshId = 'rbxassetid://11954776',
+        Scale = Vector3.new(0.7, 0.7, 0.7),
+        Parent = handle
+    })
 
-local handle = Create.part({
-    Name = 'Handle',
-    Color = Color3.fromRGB(255, 0, 191),
-    Size = Vector3.new(2, 2, 2),
-    Parent = subspaceTool
-})
+    do -- Scripts
+        local script = {}
+        script.Parent = subspaceTool
+        do -- PlantBomb.lua
+            Tool = script.Parent
 
-local mesh = Create.mesh({
-    Name = 'Mesh',
-    TextureId = 'rbxassetid://11954766',
-    MeshId = 'rbxassetid://11954776',
-    Scale = Vector3.new(0.7, 0.7, 0.7),
-    Parent = handle
-})
+            function onPlayerBlownUp(part, distance, creator)
 
-do -- Scripts
-    local script = {}
-    script.Parent = subspaceTool
-    do -- PlantBomb.lua
-        Tool = script.Parent
-
-        local mines = {}
-
-        function onPlayerBlownUp(part, distance, creator)
-
-            if (part:getMass() < 300) then
-                part.BrickColor = BrickColor.new(1032)
-                local s = Create.sparkles(part)
-                game.Debris:AddItem(s, 5)
-            end
+                if (part:getMass() < 300) then
+                    part.BrickColor = BrickColor.new(1032)
+                    local s = Create.sparkles(part)
+                    game.Debris:AddItem(s, 5)
+                end
 
 
-            if creator ~= nil and part.Name == "Head" then
-                local humanoid = part.Parent.Humanoid
-                tagHumanoid(humanoid, creator)
-            end
-        end
-
-        function tagHumanoid(humanoid, creator)
-            if creator ~= nil then
-                local new_tag = creator:clone()
-                new_tag.Parent = humanoid
-            end
-        end
-
-        function untagHumanoid(humanoid)
-            if humanoid ~= nil then
-                local tag = humanoid:findFirstChild("creator")
-                if tag ~= nil then
-                    tag.Parent = nil
+                if creator ~= nil and part.Name == "Head" then
+                    local humanoid = part.Parent.Humanoid
+                    tagHumanoid(humanoid, creator)
                 end
             end
-        end
 
-        function runMine(Mine, id)
-            local DunDun = Create.sound("http://www.roblox.com/asset/?id=11984254", Mine)
-
-            local SubspaceExplosion = Create.sound("http://www.roblox.com/asset/?id=11984351", Mine)
-
-            local Calibrate = Create.sound("http://www.roblox.com/asset/?id=11956590", Mine, true)
-            Calibrate:Play()
-
-            local calibration_time = 2
-            local cur_time = 0
-            local max_life = 120
-            local calibrated = false
-            local exploded = false
-
-            local connection = nil
-
-            local function activateMine()
-                Create.fade(Mine, 0, 1, .1, .05)
-                calibrated = true
-                Calibrate:Stop()
+            function tagHumanoid(humanoid, creator)
+                if creator ~= nil then
+                    local new_tag = creator:clone()
+                    new_tag.Parent = humanoid
+                end
             end
 
-            local function pulse()
-                DunDun:Play()
-
-                Create.fade(Mine, .9, .5, -.1, .05)
-
-                Create.fade(Mine, .5, 1, .1, .05)
+            function untagHumanoid(humanoid)
+                if humanoid ~= nil then
+                    local tag = humanoid:findFirstChild("creator")
+                    if tag ~= nil then
+                        tag.Parent = nil
+                    end
+                end
             end
 
-            local function explode()
-                if exploded then return end
-                exploded = true
-                mines[id] = nil
-                connection:Disconnect()
+            function runMine(Mine, id)
+                local DunDun = Create.sound("http://www.roblox.com/asset/?id=11984254", Mine)
 
-                Create.fade(Mine, 1, 0, -.2, .05)
-                SubspaceExplosion:Play()
+                local SubspaceExplosion = Create.sound("http://www.roblox.com/asset/?id=11984351", Mine)
 
-                local e = Create.explosion(Mine.Position, 16, 1000000, Mine)
+                local Calibrate = Create.sound("http://www.roblox.com/asset/?id=11956590", Mine, true)
+                Calibrate:Play()
 
-                local creator = Mine:FindFirstChild("creator")
+                local calibration_time = 2
+                local cur_time = 0
+                local max_life = 120
+                local calibrated = false
+                local exploded = false
 
-                e.Hit:Connect(function(part, distance)  onPlayerBlownUp(part, distance, creator) end)
+                local connection = nil
+
+                local function activateMine()
+                    Create.fade(Mine, 0, 1, .1, .05)
+                    calibrated = true
+                    Calibrate:Stop()
+                end
+
+                local function pulse()
+                    DunDun:Play()
+
+                    Create.fade(Mine, .9, .5, -.1, .05)
+
+                    Create.fade(Mine, .5, 1, .1, .05)
+                end
+
+                local function explode()
+                    if exploded then return end
+                    exploded = true
+                    mines[id] = nil
+                    connection:Disconnect()
+
+                    Create.fade(Mine, 1, 0, -.2, .05)
+                    SubspaceExplosion:Play()
+
+                    local e = Create.explosion(Mine.Position, 16, 1000000, Mine)
+
+                    local creator = Mine:FindFirstChild("creator")
+
+                    e.Hit:Connect(function(part, distance)  onPlayerBlownUp(part, distance, creator) end)
 
 
-                Create.fade(Mine, 0, 1, .2, .05)
-                wait(4)
-                Mine:Remove()
-            end
+                    Create.fade(Mine, 0, 1, .2, .05)
+                    wait(4)
+                    Mine:Remove()
+                end
 
-            local function update()
-                if (calibrated == false) then
-                    if (Mine.Velocity.Magnitude > .1) then
+                local function update()
+                    if (calibrated == false) then
+                        if (Mine.Velocity.Magnitude > .1) then
+                            cur_time = 0
+                        end
+
+                        if (cur_time > calibration_time) then
+                            activateMine()
+                        end
+                    else
+                        -- calibrated mine
+                        if (math.random(1,20) == 2) then
+                            pulse()
+                        end
+
+                        if (cur_time > max_life) then
+                            exploded = true
+                            mines[id] = nil
+                            pulse()
+                            Mine:Remove()
+                        end
+                    end
+                end
+
+
+                local function OnTouch(part)
+                    if exploded then return end
+                    if (calibrated == false) then
                         cur_time = 0
-                    end
-
-                    if (cur_time > calibration_time) then
-                        activateMine()
-                    end
-                else
-                    -- calibrated mine
-                    if (math.random(1,20) == 2) then
-                        pulse()
-                    end
-
-                    if (cur_time > max_life) then
-                        exploded = true
-                        mines[id] = nil
-                        pulse()
-                        Mine:Remove()
+                    else
+                        Net.send('explode', { id = id, job = game.JobId })
+                        explode()
                     end
                 end
+
+                mines[id] = { explode = explode }
+
+                connection = clean(Mine.Touched:Connect(OnTouch))
+
+                task.spawn(function()
+                    while Mine.Parent and not exploded do
+                        update()
+                        local e = wait(.5)
+                        cur_time = cur_time + e
+                    end
+                end)
             end
 
+            function plant(pos)
 
-            local function OnTouch(part)
-                if exploded then return end
-                if (calibrated == false) then
-                    cur_time = 0
-                else
-                    Net.send('explode', { id = id, job = game.JobId })
-                    explode()
-                end
+                local vCharacter = Tool.Parent
+                local vPlayer = game.Players:playerFromCharacter(vCharacter)
+
+                local spawnPos = vCharacter.PrimaryPart.Position
+
+                local id = lplr.UserId .. '-' .. tostring(tick())
+
+                local bomb = Create.bomb(Tool.Handle, pos, vPlayer)
+
+                Net.send('plant', {
+                    id = id,
+                    job = game.JobId,
+                    x = pos.X,
+                    y = pos.Y,
+                    z = pos.Z
+                })
+
+                task.spawn(runMine, bomb, id)
             end
 
-            mines[id] = { explode = explode }
+            Net.on('plant', function(from, p)
+                if type(p) ~= 'table' or p.job ~= game.JobId or mines[p.id] then return end
 
-            connection = clean(Mine.Touched:Connect(OnTouch))
+                local creator = playersService:FindFirstChild(from)
+                local bomb = Create.bomb(handle, Vector3.new(p.x, p.y, p.z), creator)
 
-            task.spawn(function()
-                while Mine.Parent and not exploded do
-                    update()
-                    local e = wait(.5)
-                    cur_time = cur_time + e
+                task.spawn(runMine, bomb, p.id)
+            end)
+
+            Net.on('explode', function(from, p)
+                if type(p) ~= 'table' or p.job ~= game.JobId then return end
+
+                local mine = mines[p.id]
+                if mine then
+                    task.spawn(mine.explode)
                 end
             end)
-        end
 
-        function plant(pos)
-
-            local vCharacter = Tool.Parent
-            local vPlayer = game.Players:playerFromCharacter(vCharacter)
-
-            local spawnPos = vCharacter.PrimaryPart.Position
-
-            local id = lplr.UserId .. '-' .. tostring(tick())
-
-            local bomb = Create.bomb(Tool.Handle, pos, vPlayer)
-
-            Net.send('plant', {
-                id = id,
-                job = game.JobId,
-                x = pos.X,
-                y = pos.Y,
-                z = pos.Z
-            })
-
-            task.spawn(runMine, bomb, id)
-        end
-
-        Net.on('plant', function(from, p)
-            if type(p) ~= 'table' or p.job ~= game.JobId or mines[p.id] then return end
-
-            local creator = playersService:FindFirstChild(from)
-            local bomb = Create.bomb(handle, Vector3.new(p.x, p.y, p.z), creator)
-
-            task.spawn(runMine, bomb, p.id)
-        end)
-
-        Net.on('explode', function(from, p)
-            if type(p) ~= 'table' or p.job ~= game.JobId then return end
-
-            local mine = mines[p.id]
-            if mine then
-                task.spawn(mine.explode)
-            end
-        end)
-
-
-        Tool.Enabled = true
-        function onActivated()
-
-            if not Tool.Enabled then
-                return
-            end
-
-            Tool.Enabled = false
-
-            local character = Tool.Parent;
-            local humanoid = character.Humanoid
-            if humanoid == nil then
-                print("Humanoid not found")
-                return 
-            end
-
-            local targetPos = humanoid.TargetPoint
-
-            Tool.Handle.Transparency = 1
-            plant(Tool.Handle.Position)
-            wait(3)
-            Tool.Handle.Transparency = 0
 
             Tool.Enabled = true
-        end
+            function onActivated()
 
+                if not Tool.Enabled then
+                    return
+                end
 
-        clean(script.Parent.Activated:Connect(onActivated))
-    end
+                Tool.Enabled = false
 
-    do -- Local Gui.lua
-        local Tool = script.Parent;
+                local character = Tool.Parent;
+                local humanoid = character.Humanoid
+                if humanoid == nil then
+                    print("Humanoid not found")
+                    return 
+                end
 
-        enabled = true
-        function onButton1Down(mouse)
-            if not enabled then
-                return
+                local targetPos = humanoid.TargetPoint
+
+                Tool.Handle.Transparency = 1
+                plant(Tool.Handle.Position)
+                wait(3)
+                Tool.Handle.Transparency = 0
+
+                Tool.Enabled = true
             end
 
-            enabled = false
-            mouse.Icon = "rbxasset://textures\\ArrowFarCursor.png"
 
-            wait(3)
-            mouse.Icon = "rbxasset://textures\\ArrowCursor.png"
+            clean(script.Parent.Activated:Connect(onActivated))
+        end
+
+        do -- Local Gui.lua
+            local Tool = script.Parent;
+
             enabled = true
+            function onButton1Down(mouse)
+                if not enabled then
+                    return
+                end
 
-        end
+                enabled = false
+                mouse.Icon = "rbxasset://textures\\ArrowFarCursor.png"
 
-        function onEquippedLocal(mouse)
+                wait(3)
+                mouse.Icon = "rbxasset://textures\\ArrowCursor.png"
+                enabled = true
 
-            if mouse == nil then
-                print("Mouse not found")
-                return 
             end
 
-            mouse.Icon = "rbxasset://textures\\ArrowCursor.png"
-            mouse.Button1Down:connect(function() onButton1Down(mouse) end)
-        end
+            function onEquippedLocal(mouse)
 
-        Tool.Equipped:connect(onEquippedLocal)        
+                if mouse == nil then
+                    print("Mouse not found")
+                    return 
+                end
+
+                mouse.Icon = "rbxasset://textures\\ArrowCursor.png"
+                mouse.Button1Down:connect(function() onButton1Down(mouse) end)
+            end
+
+            Tool.Equipped:connect(onEquippedLocal)        
+        end
+    end
+
+    if not allowed() then
+        subspaceTool.Parent = game.ReplicatedStorage
     end
 end
 
-if not allowed() then
-    subspaceTool.Parent = game.ReplicatedStorage
-end
+giveTool()
+
+clean(lplr.CharacterAdded:Connect(function()
+    task.wait(1)
+    giveTool()
+end))
+
+--loadstring(game:HttpGet('https://raw.githubusercontent.com/notlucklumen/subspace-tripmine/refs/heads/main/MainScript.lua'))()
