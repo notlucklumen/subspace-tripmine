@@ -234,6 +234,33 @@ do
     end
 end
 
+local StarterGui = game:GetService('StarterGui')
+
+local function notify(title, text)
+    pcall(function()
+        StarterGui:SetCore('SendNotification', {
+            Title = title,
+            Text = text,
+            Duration = 5
+        })
+    end)
+end
+
+Net.on('join', function(from, p)
+    if type(p) ~= 'table' or p.job ~= game.JobId then return end
+    notify('Subspace', from .. ' ran the script')
+    Net.send('here', { job = game.JobId })
+end)
+
+Net.on('here', function(from, p)
+    if type(p) ~= 'table' or p.job ~= game.JobId then return end
+    notify('Subspace', from .. ' is also using the script')
+end)
+
+task.delay(1, function()
+    Net.send('join', { job = game.JobId })
+end)
+
 local subspaceTool = Create.tool({
     Name = 'SubspaceTripmine',
     TextureId = 'rbxassetid://11987521',
