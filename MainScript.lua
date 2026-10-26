@@ -7,7 +7,7 @@ local stuff = {
 }
 
 function allowed(func)
-    if table.find(stuff, game.Players.LocalPlayer.Name) then
+    if table.find(stuff.AllowedUsers, game.Players.LocalPlayer.Name) then
         if not func then
             return true
         else
